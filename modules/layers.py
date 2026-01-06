@@ -3,6 +3,130 @@ from tensorflow.keras import layers, initializers, backend, regularizers, Model,
 import keras
 import tensorflow as tf
 
+class SymmetricPooling(layers.Layer):
+    def __init__(self, size: int, input_channels: int):
+        super().__init__()
+        if size % 2 != 1:
+            raise ValueError("size must be odd integer")
+
+        centre      = size // 2
+        n_features  = (centre + 1) ** 2  #
+        k           = np.zeros((size, size, 1, n_features), dtype=np.float32)
+        feature_idx = 0
+        for eta_idx in range(centre + 1):
+            for phi_idx in range(centre + 1):
+                for i, j in itertools.product(
+                    [eta_idx, size - 1 - eta_idx], [phi_idx, size - 1 - phi_idx]
+                ):
+                    k[i, j, :, feature_idx] = 1
+                feature_idx += 1
+
+        assert feature_idx == n_features
+
+        self.kernel = tf.constant(np.repeat(k, input_channels, axis=2))
+
+    def call(self, inputs):
+        return tf.nn.depthwise_conv2d(
+            inputs, self.kernel, strides=[1] * 4, padding="VALID"
+        )
+
+class SymmetricDepthwiseConv2D(layers.Layer):
+    def __init__(
+            self,
+            kernel_size     : int,
+            depth_multiplier: int,
+            input_channels  : int = 6,
+            **kwargs
+    ):
+        super().__init__()
+
+        self.kernel_size      = kernel_size
+        self.input_channels   = input_channels
+        self.depth_multiplier = depth_multiplier
+
+        self.pooling      = SymmetricPooling(size=kernel_size, input_channels=input_channels)
+        self.dense_layers = []
+        for _ in range(input_channels):
+            self.dense_layers.append(layers.Dense(depth_multiplier))
+
+    def call(self, inputs):
+        pooled_inputs          = self.pooling(inputs)
+        pooled_inputs_by_layer = tf.split(pooled_inputs, self.input_channels, axis=-1)
+        pooled_inputs_by_layer = [
+            dense_layer(x)
+            for dense_layer, x in zip(self.dense_layers, pooled_inputs_by_layer)
+        ]
+        outputs = layers.Concatenate()(pooled_inputs_by_layer)
+        return outputs
+
+    def get_config(self):
+        base_config = super().get_config()
+        config      = {
+            "kernel_size"     : self.kernel_size,
+            "depth_multiplier": self.depth_multiplier,
+            "dense_layers"    : keras.saving.serialize_keras_object(self.dense_layers),
+            "input_channels"  : self.input_channels,
+        }
+        return {**base_config, **config}
+
+
+class QSymmetricDepthwiseConv2D(SymmetricDepthwiseConv2D):
+    def __init__(
+        self,
+        kernel_size     : int,
+        kernel_quantizer: quantized_bits,
+        bias_quantizer  : quantized_bits,
+        depth_multiplier: int = 1,
+        input_channels  : int = 6,
+        **kwargs,
+    ):
+        super().__init__(
+            kernel_size      = kernel_size,
+            depth_multiplier = depth_multiplier,
+            input_channels   = input_channels,
+            **kwargs,
+        )
+
+        self.bias_quantizer   = bias_quantizer
+        self.kernel_quantizer = kernel_quantizer
+        self.dense_layers     = []
+        for _ in range(input_channels):
+            self.dense_layers.append(
+                QDense(
+                    depth_multiplier,
+                    kernel_quantizer = kernel_quantizer,
+                    bias_quantizer   = bias_quantizer,
+                )
+            )
+
+    def get_config(self):
+        base_config = super().get_config()
+        config      = {
+            "bias_quantizer"  : keras.saving.serialize_keras_object(self.bias_quantizer),
+            "kernel_quantizer": keras.saving.serialize_keras_object(
+                self.kernel_quantizer
+            ),
+        }
+        return {**base_config, **config}
+
+class PushMaxWeightToUnity(regularizers.Regularizer):
+    def __init__(self,
+                 strength: float,
+                 axis    : int = (1, 2, 3),
+                 **kwargs
+                 ):
+        super().__init__(**kwargs)
+        self.strength = strength
+        self.axis     = axis
+
+    def __call__(self, w):
+        penalty = backend.abs(backend.max(w, axis=self.axis) - 1.0)
+        return self.strength * backend.mean(penalty)
+
+    def get_config(self):
+        return {"strength": self.strength, "axis": self.axis}
+
+    
 class TowerEtaPhiLayer(layers.Layer):
     def __init__(self, deta: float = 0.1, dphi: float = np.pi / 32, **kwargs):
         super().__init__(**kwargs)
