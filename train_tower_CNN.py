@@ -120,7 +120,7 @@ if loss_by_layer:
 if add_dense > 0:
     project += f"_d{add_dense}"
 
-if "Delphes" in sample:
+if "delphes" in sample:
     path         = get_config[sample]['dir']
     name         = get_config[sample]['keyword']
     data         = ak.from_parquet(path+'/'+name)

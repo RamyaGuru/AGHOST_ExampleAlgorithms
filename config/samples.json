@@ -1,5 +1,5 @@
 {
-    "ggF_SM_HH4b_train" : {
+    "ggF_SM_HH4b_delphes" : {
 	"xsec"          : 1.0,
 	"hstp_filter_sf": 1.0,
 	"filter_eff"    : 1.0,
