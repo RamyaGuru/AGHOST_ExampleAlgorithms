@@ -10,7 +10,7 @@ def init_qrelu(precision: int):
 def init_quantiser(precision: int):
     return quantized_bits(bits = precision, integer = precision // 2, alpha = 1)
 
-def QuantizedCNN(
+def QuantisedCNN(
         size              : int,
         depth_multiplier  : int,
         hidden_layer_sizes: list[int],
