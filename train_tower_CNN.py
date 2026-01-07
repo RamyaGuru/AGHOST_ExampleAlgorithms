@@ -55,7 +55,7 @@ def build_regressor(hp):
         hidden_layer_sizes = [add_dense] if add_dense > 0 else [],
         input_shape        = input_shape,
         aux_input_shape    = aux_input_shape,
-        output_layers      = [(6, layers.Activation("hard_sigmoid"))],
+        output_layers      = [(2, layers.Activation("hard_sigmoid"))],
         symmetric          = True,
     )([inputs, aux_inputs] if use_abseta else inputs)
 
