@@ -121,8 +121,8 @@ if add_dense > 0:
     project += f"_d{add_dense}"
 
 if "delphes" in sample:
-    path         = get_config[sample]['dir']
-    name         = get_config[sample]['keyword']
+    path         = get_config(sample)['dir']
+    name         = get_config(sample)['keyword']
     data         = ak.from_parquet(path+'/'+name)
     towers       = data['Towers']
     tower_labels = data['Towers_NoPU']
