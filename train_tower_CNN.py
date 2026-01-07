@@ -21,17 +21,17 @@ import argparse
 import json
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-s", "--sample", type=str, default="ggF_SM_HH4b_train")
-parser.add_argument("--max-trials", type=int, default=1)
-parser.add_argument("--window-size", type=int, default=3)
-parser.add_argument("--batch-size", type=int, default=128)
-parser.add_argument("--epochs", type=int, default=100)
-parser.add_argument("--lr-decay", action="store_true")
-parser.add_argument("--min-Et", type=int, default=2)
-parser.add_argument("--overwrite", action="store_true")
-parser.add_argument("--abseta", action="store_true")
+parser.add_argument("-s", "--sample" , type=str, default="ggF_SM_HH4b_delphes")
+parser.add_argument("--max-trials"   , type=int, default=1)
+parser.add_argument("--window-size"  , type=int, default=3)
+parser.add_argument("--batch-size"   , type=int, default=128)
+parser.add_argument("--epochs"       , type=int, default=100)
+parser.add_argument("--lr-decay"     , action="store_true")
+parser.add_argument("--min-Et"       , type=int, default=2)
+parser.add_argument("--overwrite"    , action="store_true")
+parser.add_argument("--abseta"       , action="store_true")
 parser.add_argument("--loss-by-layer", action="store_true")
-parser.add_argument("--add-dense", type=int, default=0)
+parser.add_argument("--add-dense"    , type=int, default=0)
 args = parser.parse_args()
 
 
@@ -120,10 +120,16 @@ if loss_by_layer:
 if add_dense > 0:
     project += f"_d{add_dense}"
 
-cells = get_data(get_config(sample), filter_name="cell_*")
-
-towers       = cells_to_towers(cells)
-tower_labels = cells_to_towers(cells, Et_key="cell_et_mu0")
+if "Delphes" in sample:
+    path         = get_config[sample]['dir']
+    name         = get_config[sample]['keyword']
+    data         = ak.from_parquet(path+'/'+name)
+    towers       = data['Towers']
+    tower_labels = data['Towers_NoPU']
+else:
+    cells        = get_data(get_config(sample), filter_name="cell_*")
+    towers       = cells_to_towers(cells)
+    tower_labels = cells_to_towers(cells, Et_key="cell_et_mu0")
 
 if not loss_by_layer:
     tower_labels = tower_labels.sum(axis=-1, keepdims=True)
@@ -155,7 +161,7 @@ train_idxs, test_idxs = train_test_split(
 y_train, y_test = y[train_idxs], y[test_idxs]
 if use_abseta:
     X_train = [X[train_idxs], abseta[train_idxs]]
-    X_test  = [X[test_idxs], abseta[test_idxs]]
+    X_test  = [X[test_idxs] , abseta[test_idxs] ]
 
 else:
     X_train = X[train_idxs]

@@ -9,7 +9,7 @@ import functools
 print = functools.partial(print, flush=True)
 
 def get_config(sample):
-    return json.load(open('configs/samples.json'))[sample]
+    return json.load(open('config/samples.json'))[sample]
 
 def get_data(config, **kwargs):
     files = [

@@ -1,0 +1,11 @@
+{
+    "ggF_SM_HH4b_train" : {
+	"xsec"          : 1.0,
+	"hstp_filter_sf": 1.0,
+	"filter_eff"    : 1.0,
+	"dir"           : "/workspace/samples/ggfhh",
+	"keyword"       : "ggfhh_train.parquet",
+	"name"          : "ggF SM HH4b Open",
+	"has_truth"     : true
+    },
+}
