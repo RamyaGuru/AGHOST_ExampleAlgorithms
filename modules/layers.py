@@ -3,6 +3,7 @@ from qkeras           import QDense, quantized_bits
 
 import keras
 import tensorflow as tf
+import numpy      as np
 
 class SymmetricPooling(layers.Layer):
     def __init__(self, size: int, input_channels: int):
