@@ -111,7 +111,7 @@ def main() -> None:
 
     model.compile(loss=losses.MSE, optimizer=optimizers.Adam(learning_rate=10e-3))
 
-    my_data = load_data('')
+    my_data = load_data()
     
     if channels < 2:
         my_data[0] = my_data[0].sum(axis=-1, keepdims=True)
