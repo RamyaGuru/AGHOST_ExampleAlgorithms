@@ -76,4 +76,4 @@ def QuantisedCNN(
         outputs = output[0]            if len(outputs) == 0 else outputs,
         name    = name)
 
-    return model #name [RLG: Since this was returning a string and not a model, weights = QuantisedCNN(...)(inputs) was failing]
+    return model
