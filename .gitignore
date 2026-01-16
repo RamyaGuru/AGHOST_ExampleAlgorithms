@@ -1,0 +1,13 @@
+# Trash
+.Trash-0/
+#Core-dump
+core
+#Models
+models/
+#Notebook
+**/.ipynb_checkpoints/
+.ipynb_checkpoints/
+*.ipynb
+#Cache
+**/__pycache__/
+
