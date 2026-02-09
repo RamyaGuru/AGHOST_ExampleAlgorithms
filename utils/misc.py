@@ -60,3 +60,20 @@ def sparse_to_awkward(arr, min_pt=1e-12):
     eta    = ak.unflatten(arr.eta[mask], counts)
     phi    = ak.unflatten(arr.phi[mask], counts)
     return vector.zip({"m": m, "pt": pt, "eta": eta, "phi": phi})
+
+def sort_and_pad(vectors, n):
+    def zero_pad(x):
+        return ak.fill_none(ak.pad_none(x, n, clip=True), 0)
+
+    vectors = vectors[ak.argsort(vectors.pt, axis=1, ascending=False)]
+
+    padded_vectors = vector.zip(
+        {
+            "m"  : zero_pad(vectors.m)  ,
+            "pt" : zero_pad(vectors.pt) ,
+            "eta": zero_pad(vectors.eta),
+            "phi": zero_pad(vectors.phi),
+        }
+    )
+
+    return padded_vectors
