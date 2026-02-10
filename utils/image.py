@@ -117,3 +117,91 @@ def augment_image(X):
 
 def get_index(vectors):
     return ak.ones_like(vectors.eta, dtype=int) * np.arange(len(vectors))
+
+def get_centers(edges):
+    return (edges[:-1] + edges[1:]) / 2
+
+def get_weight_variations(weights, N = 25):
+    np.random.seed(42)
+    poiss           = np.random.poisson(1.0, size = (len(weights), N))
+    poisson_weights = np.asarray(weights).reshape(-1, 1) * poiss
+    return poisson_weights
+
+def get_hist_variations(x, bins=20, weights=None, density=False, N=25):
+    if weights is None:
+        weights = np.ones_like(x)
+
+    poisson_weights = get_weight_variations(weights, N)
+
+    bin_edges = np.histogram_bin_edges(x, bins, weights=weights)
+    _, widx   = np.indices(poisson_weights.shape)
+
+    x = np.broadcast_to(x.reshape(-1, 1), poisson_weights.shape)
+
+    variations = np.histogram2d(
+        x.flatten(),
+        widx.flatten(),
+        bins    = [bin_edges, N],
+        weights = poisson_weights.flatten(),
+    )[0]
+
+    if density:
+        norm = variations.mean(axis=1).sum() * np.diff(bin_edges)[:, None]
+    else:
+        norm = 1.0
+
+    return variations / norm, bin_edges
+
+def _clopper_pearson(k, n, alpha=0.03173):
+    from scipy.stats import beta
+
+    lower = beta.ppf(alpha / 2, k, n - k + 1)
+    upper = beta.ppf(1 - alpha / 2, k + 1, n - k)
+
+    return lower, upper
+
+def plot_turn_on(x, mask, bins = 20, ax = None, conf_level = 0.6828, **kwargs):
+    if ax is None:
+        from matplotlib import pyplot as plot
+        _, ax = plt.subplots()
+
+    x = np.asarray(x)
+    m = np.asarray(mask, dtype=bool)
+
+    if np.isscalar(bins):
+        bin_edges = np.histogram_bin_edges(x, bins)
+    else:
+        bin_edges = np.asarray(bins)
+
+    n, _ = np.histogram(x   , bins = bin_edges)
+    k, _ = np.histogram(x[m], bins = bin_edges)
+
+    eff = np.zeros_like(n, dtype=float)
+    ok  = n > 0 
+
+    eff[ok] = k[ok] / n[ok]
+
+    alpha  = 1.0 - float(conf_level)
+    lo, hi = _clopper_pearson(k, n, alpha)
+
+    yerr = np.vstack([eff-lo, hi-eff])
+
+    centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
+
+    ax.errorbar(
+        centers,
+        eff,
+        yerr      = yerr,
+        fmt       = 'o',
+        capsize   = 3,
+        linestyle = 'none',
+        **kwargs,
+    )
+
+    ax.set_title(kwargs.get('label', ''))
+    ax.set_xlabel('Truth Jet $p_T$ [GeV]')
+    ax.set_ylabel('Efficiency')
+    ax.grid()
+
+    return centers, eff, lo, hi
+
