@@ -42,3 +42,8 @@ def truth_match(recon, truth, max_dR=0.4, bijective=False):
     matched_truth = truth[truth_idxs]
     matched_recon = recon[recon_idxs]
     return matched_recon, matched_truth
+
+def antikt_jets(vectors, min_pt, r=0.4):
+    jetdef = fastjet.JetDefinition(fastjet.antikt_algorithm, r)
+    jets = fastjet.ClusterSequence(vectors, jetdef)
+    return jets.inclusive_jets(min_pt)
